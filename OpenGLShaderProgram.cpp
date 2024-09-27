@@ -198,7 +198,7 @@ void OpenGLShaderProgram::mapAttributePointer(GLuint index, GLint size,
                                               int offset) noexcept
 {
     // Fill in the Blank
-    glVertexAttribPointer(index, size, type, normalized, stride, (const GLvoid *)(intptr_t)offset);
+    glVertexAttribPointer(index, size, type, normalized, stride, (void *)offset);
 }
 
 void OpenGLShaderProgram::tidy() noexcept

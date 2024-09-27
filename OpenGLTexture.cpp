@@ -99,7 +99,7 @@ void OpenGLTexture::bindBuffer(const std::vector<unsigned char> &buffer) const
 
 	// (generate mipmap)
     
-
+    glBindTexture(GL_TEXTURE_2D, id_);
     // Set texture parameters (filtering and wrapping)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -173,19 +173,17 @@ void OpenGLTexture::setMinificationFilter(Filter filter)
     release();
 }
 
-void OpenGLTexture::setWrapOption(WrapOption option)
-{
-    PROGRAM_ASSERT(Detail::isCreated(id_));
-    wrapOption_ = option;
+    void OpenGLTexture::setWrapOption(WrapOption option)
+    {
+        PROGRAM_ASSERT(Detail::isCreated(id_));
+        wrapOption_ = option;
 
-    bind();
-    // Fill in the Blank
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                    static_cast<GLint>(option));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                    static_cast<GLint>(option));
-    release();
-}
+        bind();
+        // Fill in the Blank
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, option);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, option);
+        release();
+    }
 
 void OpenGLTexture::tidy()
 {

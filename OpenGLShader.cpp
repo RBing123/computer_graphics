@@ -97,7 +97,7 @@ void OpenGLShader::create()
     PROGRAM_ASSERT(!Detail::isCreated(id_));
 
     // Fill in the Blank
-    id_ = glCreateShader(static_cast<GLenum>(type_));
+    id_ = glCreateShader(type_);
 
     if (!Detail::isCreated(id_))
     {

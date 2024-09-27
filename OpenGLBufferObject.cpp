@@ -67,7 +67,7 @@ void OpenGLBufferObject::allocateBufferData(const void *data,
     PROGRAM_ASSERT(Detail::isCreated(id_));
 
     // Fill in the Blank
-    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    glBufferData(type_, size, data, GL_STATIC_DRAW);
 }
 
 void OpenGLBufferObject::bind() noexcept
@@ -75,7 +75,7 @@ void OpenGLBufferObject::bind() noexcept
     PROGRAM_ASSERT(Detail::isCreated(id_));
 
     // Fill in the Blank
-    glBindBuffer(GL_ARRAY_BUFFER, id_);
+    glBindBuffer(type_, id_);
 }
 
 void OpenGLBufferObject::create()
