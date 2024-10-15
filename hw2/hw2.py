@@ -42,14 +42,14 @@ def draw_line(event, x, y, flags, param):
         ix, iy = x, y  # Store the initial point
     elif event == cv2.EVENT_MOUSEMOVE:  # Mouse move
         if drawing:  # Draw only when the mouse is pressed
-            img_copy = param.img.copy()  # Make a copy to avoid drawing permanent lines
+            img_copy = param.featureimg.copy()  # Make a copy to avoid drawing permanent lines
             cv2.line(img_copy, (ix, iy), (x, y), (0, 255, 0), 2)
             cv2.imshow(param.window_name, img_copy)  # Display the copy
     elif event == cv2.EVENT_LBUTTONUP:  # Left mouse button released
         drawing = False  # End drawing
         # Draw the final line on the original image with an arrow
-        cv2.arrowedLine(param.img, (ix, iy), (x, y), (0, 255, 0), 2, tipLength=0.05)
-        cv2.imshow(param.window_name, param.img)  # Display the image with the final line
+        cv2.arrowedLine(param.featureimg, (ix, iy), (x, y), (0, 255, 0), 2, tipLength=0.05)
+        cv2.imshow(param.window_name, param.featureimg)  # Display the image with the final line
 
         param.lines.append(((ix, iy), (x, y)))
         # print(f"Line drawn in {param.window_name}: {param.lines}")
@@ -65,8 +65,7 @@ def show_image(img_data):
     cv2.imshow(img_data.window_name, img_data.img)  # Show the image
     cv2.waitKey(0)  # Wait for a key press
     cv2.destroyWindow(img_data.window_name)  # Close the window when done
-    
-    cv2.imwrite(f"{img_data.window_name}.jpg",img_data.img) # save the modified image
+    cv2.imwrite(f"{img_data.window_name}.jpg",img_data.featureimg) # save the modified image
     # show_point(img_data)
 
 def process_img(image_path, image_title):
@@ -94,11 +93,7 @@ def bilinear(img, point, h, w):
     
 def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     assert len(P1)==len(Q1)==len(P2)==len(Q2)
-    
-    
-    # print(src.img.shape, dst.img.shape)
-    # result, Pd, Qd = v(src.img, dst.img, P1, Q1, P2, Q2, ratio=alpha)
-    # return result
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
