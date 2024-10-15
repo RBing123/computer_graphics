@@ -12,21 +12,29 @@ image_data_list=[]
 class ImageData:
     def __init__(self, img, window_name):
         self.img = img
+        self.featureimg=img # record feature image
         self.window_name = window_name
         self.lines = [] # record points
-        self.featureimg=img
+        self.vector = []
+        self.vector_length = []
+        self.perp = []
         
-def Perpendicular(v):
-    v_length = np.sqrt(np.sum(v**2, axis=1, keepdims=True))
-    v_homo = np.pad(v, ((0, 0), (0, 1)), mode="constant") # pad to R3, pad zeros
-    z_axis = np.zeros(v_homo.shape)
-    z_axis[:, -1] = 1
-    p = np.cross(v_homo, z_axis)
-    p = p[:, :-1] # ignore z axis
-    p_length = np.sqrt(np.sum(p**2, axis=1, keepdims=True))
-    p = p / (p_length + 1e-8) # now sum = 1
-    p *= v_length
-    return p
+def Perpendicular(start_point, end_point, param):
+    vector = end_point-start_point
+    param.vector.append(vector)
+    v_length = np.sqrt(np.sum(vector**2))
+    param.vector_length.append(v_length)
+    
+    # v_length = np.sqrt(np.sum(v**2, axis=1, keepdims=True))
+    # v_homo = np.pad(v, ((0, 0), (0, 1)), mode="constant") # pad to R3, pad zeros
+    # z_axis = np.zeros(v_homo.shape)
+    # z_axis[:, -1] = 1
+    # p = np.cross(v_homo, z_axis)
+    # p = p[:, :-1] # ignore z axis
+    # p_length = np.sqrt(np.sum(p**2, axis=1, keepdims=True))
+    # p = p / (p_length + 1e-8) # now sum = 1
+    # p *= v_length
+    # return p
 
 def PointInterpolation(v1, v2, ratio=0.5):
     # v1, v2 : N x 2
@@ -93,7 +101,11 @@ def bilinear(img, point, h, w):
     
 def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     assert len(P1)==len(Q1)==len(P2)==len(Q2)
-
+    for i in range(len(P1)):
+        Perpendicular(P1[i], Q1[i], src)
+    for i in range(len(src.vector)):
+        print(f"v{i} is {src.vector[i]}")
+        print(f"v{i}_length is {src.vector_length[i]}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
