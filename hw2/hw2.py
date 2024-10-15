@@ -35,9 +35,18 @@ def normalize(v):
     return v/np.linalg.norm(v)
 
 def PointInterpolation(v1, v2, ratio=0.5):
-    # v1, v2 : N x 2
-    # interpolation of points by finding the midpoint
-    return v1 * (1. - ratio) + v2 * ratio
+    """
+        Calculate interpolated image with different ratio
+        v1 is t=0 vector, v1 is [x1, y1]
+        v2 is t=1 vector, v2 is [x2, y2]
+    """
+    x = (1 - ratio) * v1[0] + ratio * v2[0]
+    y = (1 - ratio) * v1[1] + ratio * v2[1]
+    
+    # 將內插點 (x, y) 加入結果向量
+    # interpolation_vector.append([x, y])
+    # print(f"Interpolated point: [{x}, {y}]")
+    return (x, y)
 
 # Mouse callback function for drawing lines
 def draw_line(event, x, y, flags, param):
@@ -99,13 +108,20 @@ def bilinear(img, point, h, w):
     
 def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     assert len(P1)==len(Q1)==len(P2)==len(Q2)
+    interpolate = []
     for i in range(len(P1)):
         Perpendicular(P1[i], Q1[i], src)
-    for i in range(len(src.vector)):
-        print(f"v{i} is {src.vector[i]}")
-        print(f"v{i}_length is {src.vector_length[i]}")
-        print(f"p{i} is {src.perp[i]}")
-
+        Perpendicular(P2[i], Q2[i], dst)
+    # for i in range(len(src.vector)):
+    #     print(f"v{i} is {src.vector[i]}")
+    #     print(f"v{i}_length is {src.vector_length[i]}")
+    #     print(f"p{i} is {src.perp[i]}")
+    for i in range(len(P1)):
+        interpolate_start = PointInterpolation(P1[i], P2[i], alpha)
+        interpolate_end = PointInterpolation(Q1[i], Q2[i], alpha)
+        interpolate.append([interpolate_start, interpolate_end])
+    
+    # print(v)
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python hw2.py <image_path1> <image_path2>")
