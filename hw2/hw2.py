@@ -15,9 +15,9 @@ class ImageData:
         self.featureimg=img # record feature image
         self.window_name = window_name
         self.lines = [] # record points
-        self.vector = []
-        self.vector_length = []
-        self.perp = []
+        self.vector = [] # record the vector
+        self.vector_length = [] # store vector length
+        self.perp = []  # store perpendicular vector
         
 def Perpendicular(start_point, end_point, param):
     vector = end_point-start_point
@@ -25,16 +25,14 @@ def Perpendicular(start_point, end_point, param):
     v_length = np.sqrt(np.sum(vector**2))
     param.vector_length.append(v_length)
     
-    # v_length = np.sqrt(np.sum(v**2, axis=1, keepdims=True))
-    # v_homo = np.pad(v, ((0, 0), (0, 1)), mode="constant") # pad to R3, pad zeros
-    # z_axis = np.zeros(v_homo.shape)
-    # z_axis[:, -1] = 1
-    # p = np.cross(v_homo, z_axis)
-    # p = p[:, :-1] # ignore z axis
-    # p_length = np.sqrt(np.sum(p**2, axis=1, keepdims=True))
-    # p = p / (p_length + 1e-8) # now sum = 1
-    # p *= v_length
-    # return p
+    perp = np.empty_like(vector)
+    perp[0] = -vector[1]
+    perp[1] = vector[0]
+    param.perp.append(perp)
+    
+def normalize(v):
+    v = np.array(v)
+    return v/np.linalg.norm(v)
 
 def PointInterpolation(v1, v2, ratio=0.5):
     # v1, v2 : N x 2
@@ -106,6 +104,7 @@ def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     for i in range(len(src.vector)):
         print(f"v{i} is {src.vector[i]}")
         print(f"v{i}_length is {src.vector_length[i]}")
+        print(f"p{i} is {src.perp[i]}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
