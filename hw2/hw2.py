@@ -89,80 +89,134 @@ def process_img(image_path, image_title):
     # Start a new thread to show the image
     threading.Thread(target=show_image, args=(img_data,)).start()
 
-def bilinear(img, point, h, w):
-    x, y = point[0], point[1]
-    x1, y1 = math.floor(x), math.floor(y)
-    x2, y2 = math.ceil(x), math.ceil(y)
-    if x2>=h:
-        x2 = h-1
-    if y2>=w:
-        y2 = w-1
-    a, b = x-x1, y-y1
-    # get the color
-    val = (1-a)*(1-b)*img[x1, y1] + a*(1-b) * img[x2, y1] + (1 - a) * b * img[x1, y2] + a * b *img[x2, y2]
-    return val
+def bilinear_interpolate(image, x, y):
+    h, w, _ = image.shape
+    x0 = int(np.floor(x))
+    x1 = min(x0 + 1, w - 1)
+    y0 = int(np.floor(y))
+    y1 = min(y0 + 1, h - 1)
+
+    if x0 < 0 or y0 < 0 or x1 < 0 or y1 < 0:
+        return np.array([0, 0, 0])  # Return black for out-of-bounds
+
+    # Calculate the weights for interpolation
+    x_weight = x - x0
+    y_weight = y - y0
+
+    # Perform bilinear interpolation
+    value = (
+        image[y0, x0] * (1 - x_weight) * (1 - y_weight) +
+        image[y0, x1] * x_weight * (1 - y_weight) +
+        image[y1, x0] * (1 - x_weight) * y_weight +
+        image[y1, x1] * x_weight * y_weight
+    )
+
+    return value
     
-def calculate_warp_field(img_shape, interpolate_vector, start_point, end_point, alpha):
-    H, W = img_shape[:2]
-    warp_field = np.zeros((H, W, 2), dtype=np.float32)
+def calculate_warp_field(img_s, P_s, Q_s, P_d, Q_d):
+    eps = 1e-8
+    a = 1
+    p = 0.5
+    b = 1
+    if P_s.ndim == 1:
+        P_s = np.reshape(P_s, (1, 2))  # 将其变为 (1, 2)
+    elif P_s.ndim != 2 or P_s.shape[1] != 2:
+        raise ValueError("P_s 的形状不符合预期。")
 
-    for i, ((p_interp, q_interp), (p1, q1), (p2, q2)) in enumerate(zip(interpolate_vector, start_point, end_point)):
-        # 計算線段的向量
-        line_vec = np.array(q_interp) - np.array(p_interp)
-        line_length = np.linalg.norm(line_vec)
-        if line_length == 0:
-            continue
-        line_dir = line_vec / line_length
-
-        # 計算垂直方向的單位向量
-        perp_dir = np.array([-line_dir[1], line_dir[0]])
-
-        # 計算每個像素的位置
-        Y, X = np.meshgrid(np.arange(H), np.arange(W), indexing='ij')
-        pixels = np.stack([X, Y], axis=-1).astype(np.float32)  # HxWx2
-
-        # 計算像素到線段的平行距離
-        AP = pixels - p_interp
-        proj = np.dot(AP, line_dir)
-        proj = np.clip(proj, 0, line_length)
-        closest = p_interp + np.outer(proj.flatten(), line_dir).reshape(H, W, 2)
-        dist_vec = pixels - closest
-        dist = np.linalg.norm(dist_vec, axis=-1)
-
-        # 計算權重（根據距離）
-        a = 0.1
-        b = 2.0
-        weight = (line_length ** 0.5) / (a + dist) ** b
-
-        # 計算變形向量
-        delta_p = np.array(p2) - np.array(p1)
-        delta_q = np.array(q2) - np.array(q1)
-        delta_interp = delta_p * alpha + delta_q * (1 - alpha)
-
-        # 計算每個像素的變形向量
-        influence = (delta_interp / line_length) * weight[..., np.newaxis] * perp_dir
-
-        # 累加變形向量
-        warp_field += influence
-
-    return warp_field
+    if Q_s.ndim == 1:
+        Q_s = np.reshape(Q_s, (1, 2))  # 将其变为 (1, 2)
+    elif Q_s.ndim != 2 or Q_s.shape[1] != 2:
+        raise ValueError("Q_s 的形状不符合预期。")
     
+    perp_d = np.array([-P_d[1], P_d[0]])  # 确保是方向正确
+    perp_s = np.array([-P_s[1], P_s[0]])  # 同上
+
+    # 确保 P_d 和 Q_d 是正确的形状
+    dest_line_vec = Q_d - P_d
+    source_line_vec = Q_s - P_s
+
+    image_size = img_s.shape[0]
+    x, y = np.meshgrid(np.arange(image_size), np.arange(image_size))
+    X_d = np.dstack([x, y]).reshape(-1, 1, 2)  # 变形后的目标坐标
+
+    to_p_vec = X_d - P_d
+    to_q_vec = X_d - Q_d
+
+    # 计算 u 和 v
+    u = np.sum(to_p_vec * dest_line_vec, axis=-1) / (np.sum(dest_line_vec**2) + eps)  # 注意这里不再使用 axis=1
+    v = np.sum(to_p_vec * perp_d, axis=-1) / (np.sqrt(np.sum(dest_line_vec**2)) + eps)  # 同样处理
+
+    # Adjust dimensions for broadcasting
+    u = np.expand_dims(u, -1)  # Shape: (N, 1)
+    v = np.expand_dims(v, -1)  # Shape: (N, 1)
+
+    # 确保 source_line_vec 和 P_s 的形状兼容
+    source_line_vec = np.expand_dims(source_line_vec, 0)  # Shape: (1, 2)
+    P_s = np.reshape(P_s, (1, 2))  # Shape: (1, 2)，假设 P_s 是 (2,) 形状的点
+
+    X_s = np.expand_dims(P_s, 0) + \
+        u * source_line_vec + \
+        v * perp_s / (np.sqrt(np.sum(source_line_vec**2)) + eps)
+
+    D = X_s - X_d
+
+    # 计算权重
+    to_p_mask = (u < 0).astype(np.float64)
+    to_q_mask = (u > 1).astype(np.float64)
+    to_line_mask = np.ones(to_p_mask.shape) - to_p_mask - to_q_mask
+
+    to_p_dist = np.sqrt(np.sum(to_p_vec**2, axis=-1))
+    to_q_dist = np.sqrt(np.sum(to_q_vec**2, axis=-1))
+    to_line_dist = np.abs(v)
+
+    dist = to_p_dist * to_p_mask + to_q_dist * to_q_mask + to_line_dist * to_line_mask
+    dest_line_length = np.sqrt(np.sum(dest_line_vec**2))
+    weight = (dest_line_length**p) / (((a + dist)**b) + eps)
+
+    weighted_D = np.sum(D * np.expand_dims(weight, -1), axis=1) / (np.sum(weight, -1, keepdims=True) + eps)
+
+    X_d = X_d.squeeze()
+    X_s = X_d + weighted_D
+
+    if len(img_s.shape) == 2:
+        warped = map_coordinates(img_s, X_s[:, ::-1].T, mode="nearest")
+    else:
+        warped = np.zeros((image_size * image_size, img_s.shape[2]))
+        for i in range(img_s.shape[2]):
+            warped[:, i] = map_coordinates(img_s[:, :, i], X_s[:, ::-1].T, mode="nearest")
     
+    warped = warped.reshape(image_size, image_size, -1).squeeze()
+    return warped.astype(np.uint8)
+
+def blend_images(warped_src, warped_dst, alpha=0.5):
+    """
+    混合兩張變形後的圖像。
+    """
+    blended_image = cv2.addWeighted(warped_src, 1 - alpha, warped_dst, alpha, 0)
+    return blended_image
+
 def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     assert len(P1)==len(Q1)==len(P2)==len(Q2)
     interpolate = []
-    # Calculate perpendicular vector
-    for i in range(len(P1)):
-        Perpendicular(P1[i], Q1[i], src)
-        Perpendicular(P2[i], Q2[i], dst)
+   
     # Calculate interpolate point
     for i in range(len(P1)):
         interpolate_start = PointInterpolation(P1[i], P2[i], alpha)
         interpolate_end = PointInterpolation(Q1[i], Q2[i], alpha)
         interpolate.append([interpolate_start, interpolate_end])
-    lines1 = [(P1[i], Q1[i]) for i in range(len(P1))]
-    lines2 = [(P2[i], Q2[i]) for i in range(len(P2))]
-    warp_field = calculate_warp_field(src.img.shape, interpolate, lines1, lines2, alpha)
+    P1_np = np.array(P1)
+    Q1_np = np.array(Q1)
+    interpolate_start_np = np.array(interpolate[0][0])
+    interpolate_end_np = np.array(interpolate[0][1])
+    warped_image = calculate_warp_field(src.img, P1_np, Q1_np, interpolate_start_np, interpolate_end_np)
+    return warped_image
+    # cv2.imwrite("warped_1.jpg", warped_1)
+    # cv2.imwrite("warped_2.jpg", warped_2)
+    # merged = warped_1 * alpha + warped_2 * (1 - alpha)
+    # merged = merged.astype(np.uint8)
+    # return merged
+    # 
+    
     # check warp field
     # warped_image = cv2.remap(src.img, warp_field[..., 0], warp_field[..., 1], interpolation=cv2.INTER_LINEAR)
     # cv2.imshow("Warped Image", warped_image)
@@ -216,7 +270,10 @@ if __name__ == "__main__":
         # print("P2 shape:", P2.shape)
         # print("Q2 shape:", Q2.shape)
         # Call the warp function with the points
-        warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
+        result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
+        cv2.imshow("result", result)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         
     elif len(image_data_list)<=0:
         print(f"Error image data size {len(image_data_list)}")
