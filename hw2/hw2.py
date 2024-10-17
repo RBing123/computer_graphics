@@ -110,7 +110,7 @@ def backward_mapping(image, x, y):
     value = (1-s)*((1-t)*I11 + t*I12)+s*((1-t)*I21+t*I22)
     return value
     
-def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=1):
+def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=2):
     # 计算源图像和目标图像的向量
     src_vector = Q1 - P1
     inter_vector = Q2 - P2
@@ -147,7 +147,7 @@ def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=1):
     return displacement, weight
 
 
-def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature_start, target_feature_end, a=1, b=1, p=0.5):
+def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature_start, target_feature_end, a=1, b=2, p=0.5):
     h, w, _ = img.shape
     warp_img = np.empty_like(img)
     
@@ -172,11 +172,11 @@ def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature
             point_x = point[0]
             point_y = point[1]
 
-            # If point[0] or point[1] are arrays, flatten them or take their first element
-            if isinstance(point_x, np.ndarray):
-                point_x = point_x[0]
-            if isinstance(point_y, np.ndarray):
-                point_y = point_y[0]
+            # # If point[0] or point[1] are arrays, flatten them or take their first element
+            # if isinstance(point_x, np.ndarray):
+            #     point_x = point_x[0]
+            # if isinstance(point_y, np.ndarray):
+            #     point_y = point_y[0]
 
             # Clamping point to image boundaries
             point_x = float(point[0])
