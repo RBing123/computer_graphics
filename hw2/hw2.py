@@ -107,7 +107,7 @@ def backward_mapping(image, x, y):
     a = I11 * (1 - t) + I12 * t  # Interpolate horizontally along top row
     b = I21 * (1 - t) + I22 * t  # Interpolate horizontally along bottom row
     value = a * (1 - s) + b * s  # Interpolate vertically between the two rows
-
+    value = (1-s)*((1-t)*I11 + t*I12)+s*((1-t)*I21+t*I22)
     return value
     
 def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=1):
@@ -135,9 +135,9 @@ def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=1):
     displacement = xt - cur_point
     # 计算权重的距离 dist，依赖于 u 的值
     if u < 0:
-        dist = np.sqrt(np.sum(np.square(cur_point - P1)))  # 如果 u < 0，计算与起点的距离
+        dist = np.sqrt(np.sum(np.square(xt - P1)))  # 如果 u < 0，计算与起点的距离
     elif u > 1:
-        dist = np.sqrt(np.sum(np.square(cur_point - Q1)))  # 如果 u > 1，计算与终点的距离
+        dist = np.sqrt(np.sum(np.square(xt - Q1)))  # 如果 u > 1，计算与终点的距离
     else:
         dist = abs(v)  # 如果 0 <= u <= 1，距离为垂直距离
 
@@ -145,6 +145,7 @@ def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=1):
     weight = pow((inter_len**p) / (a + dist), b)
 
     return displacement, weight
+
 
 def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature_start, target_feature_end, a=1, b=1, p=0.5):
     h, w, _ = img.shape
@@ -178,15 +179,12 @@ def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature
                 point_y = point_y[0]
 
             # Clamping point to image boundaries
-            if point_x < 0:
-                point_x = 0
-            elif point_x >= h:
-                point_x = h - 1
-            
-            if point_y < 0:
-                point_y = 0
-            elif point_y >= w:
-                point_y = w - 1
+            point_x = float(point[0])
+            point_y = float(point[1])
+
+            # Clamping point to image boundaries
+            point_x = np.clip(point_x, 0, w - 1)
+            point_y = np.clip(point_y, 0, h - 1)
 
             # Backward map the point to get the pixel value
             warp_img[y, x] = backward_mapping(img, point_x, point_y)
