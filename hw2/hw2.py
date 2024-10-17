@@ -11,28 +11,13 @@ image_data_list=[]
 # Structure to hold image data and window name
 class ImageData:
     def __init__(self, img, window_name):
-        self.img = img
-        self.featureimg=img # record feature image
+        self.img = img.copy()
+        self.featureimg=img.copy() # record feature image
         self.window_name = window_name
         self.lines = [] # record points
         self.vector = [] # record the vector
         self.vector_length = [] # store vector length
         self.perp = []  # store perpendicular vector
-        
-def Perpendicular(start_point, end_point, param):
-    vector = end_point-start_point
-    param.vector.append(vector)
-    v_length = np.sqrt(np.sum(vector**2))
-    param.vector_length.append(v_length)
-    
-    perp = np.empty_like(vector)
-    perp[0] = -vector[1]
-    perp[1] = vector[0]
-    param.perp.append(perp)
-    
-def normalize(v):
-    v = np.array(v)
-    return v/np.linalg.norm(v)
 
 def PointInterpolation(v1, v2, ratio=0.5):
     """
@@ -66,7 +51,6 @@ def draw_line(event, x, y, flags, param):
         param.lines.append(((ix, iy), (x, y)))
         # print(f"Line drawn in {param.window_name}: {param.lines}")
     
-
 def show_point(param):
     print(f"Line drawn in {param.window_name}: {param.lines}")
 
@@ -74,7 +58,7 @@ def show_image(img_data):
     global alpha
     cv2.namedWindow(img_data.window_name)  # Create a window
     cv2.setMouseCallback(img_data.window_name, draw_line, param=img_data)  # Set the mouse callback function
-    cv2.imshow(img_data.window_name, img_data.img)  # Show the image
+    cv2.imshow(img_data.window_name, img_data.featureimg)  # Show the image
     cv2.waitKey(0)  # Wait for a key press
     cv2.destroyWindow(img_data.window_name)  # Close the window when done
     cv2.imwrite(f"{img_data.window_name}.jpg",img_data.featureimg) # save the modified image
@@ -89,30 +73,44 @@ def process_img(image_path, image_title):
     # Start a new thread to show the image
     threading.Thread(target=show_image, args=(img_data,)).start()
 
-def backward_mapping(image, x, y, a=1, b=1, p=0.5):
+def backward_mapping(image, x, y):
     h, w, _ = image.shape
+    
+    # Ensure x and y are within the bounds of the image
+    if x < 0:
+        x = 0
+    elif x >= w:
+        x = w - 1
+
+    if y < 0:
+        y = 0
+    elif y >= h:
+        y = h - 1
+    
+    # Get the integer coordinates surrounding the point
     u1 = int(np.floor(x))
-    u2 = min(u1 + 1, w - 1)
+    u2 = min(u1 + 1, w - 1)  # Ensure u2 is within bounds
     v1 = int(np.floor(y))
-    v2 = min(v1 + 1, h - 1)
+    v2 = min(v1 + 1, h - 1)  # Ensure v2 is within bounds
 
-    if u1 < 0 or v1 < 0 or u2 < 0 or v2 < 0:
-        return np.array([0, 0, 0])  # Return black for out-of-bounds
+    # Calculate the distances from the point to the grid
+    t = x - u1  # Horizontal distance (x direction)
+    s = y - v1  # Vertical distance (y direction)
 
-    # Calculate the weights for interpolation
-    x_weight = x - u1
-    y_weight = y - v1
+    # Get the four surrounding pixel values
+    I11 = image[v1, u1]  # Top-left
+    I12 = image[v1, u2]  # Top-right
+    I21 = image[v2, u1]  # Bottom-left
+    I22 = image[v2, u2]  # Bottom-right
 
     # Perform bilinear interpolation
-    value = (
-        image[v1, u1] * (1 - x_weight) * (1 - y_weight) +
-        image[v1, u2] * x_weight * (1 - y_weight) +
-        image[v2, u1] * (1 - x_weight) * y_weight +
-        image[v2, u2] * x_weight * y_weight
-    )
+    a = I11 * (1 - t) + I12 * t  # Interpolate horizontally along top row
+    b = I21 * (1 - t) + I22 * t  # Interpolate horizontally along bottom row
+    value = a * (1 - s) + b * s  # Interpolate vertically between the two rows
+
     return value
     
-def mapping(cur_point, P1, Q1, P2, Q2, p=0, a=1, b=2):
+def mapping(cur_point, P1, Q1, P2, Q2, p=0.5, a=1, b=1):
     # 计算源图像和目标图像的向量
     src_vector = Q1 - P1
     inter_vector = Q2 - P2
@@ -132,10 +130,9 @@ def mapping(cur_point, P1, Q1, P2, Q2, p=0, a=1, b=2):
     v = np.inner(PX, PQ_perpen) / inter_len  # v 是垂直于目标线段的偏移量
 
     # 根据 u 和 v 计算 Xt（在源图像上的点）
-    PQt = src_vector  # 源图像的向量
     src_len = np.sqrt(np.sum(src_vector**2))  # 源图像线段的长度
-    xt = P1 + u * PQt + (v * src_perpen) / src_len  # 在源图像中的映射点 xt
-
+    xt = P1 + u * src_vector + (v * src_perpen) / src_len  # 在源图像中的映射点 xt
+    displacement = xt - cur_point
     # 计算权重的距离 dist，依赖于 u 的值
     if u < 0:
         dist = np.sqrt(np.sum(np.square(cur_point - P1)))  # 如果 u < 0，计算与起点的距离
@@ -147,27 +144,28 @@ def mapping(cur_point, P1, Q1, P2, Q2, p=0, a=1, b=2):
     # 计算权重 weight
     weight = pow((inter_len**p) / (a + dist), b)
 
-    return xt, weight
+    return displacement, weight
 
 def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature_start, target_feature_end, a=1, b=1, p=0.5):
     h, w, _ = img.shape
     warp_img = np.empty_like(img)
     
     # Loop over each pixel in the image
-    for x in range(w):
-        for y in range(h):
-            psum = np.array([0, 0], dtype=float)  # Initialize psum as float array
-            wsum = 0
+    for y in range(h):
+        for x in range(w):
+            dsum = np.array([0, 0], dtype=float)  # Initialize dsum as float array
+            wsum = 0.0
             for i in range(len(src_feature_start)):
-                # print(f"src_feature_start is {src_feature_start[i]}, target_feature_start is {target_feature_start[i]}, src_feature_end is {src_feature_end[i]}, target_feature_end is {target_feature_end[i]}")
-                
                 # Get the transformed point and weight for each line
-                xt, weight = mapping(np.array([x, y]), src_feature_start[i], src_feature_end[i], target_feature_start[i], target_feature_end[i], p, a, b)
-                psum += xt * weight  # Accumulate psum
+                displacement, weight = mapping(np.array([x, y]), 
+                                               src_feature_start[i], src_feature_end[i], 
+                                               target_feature_start[i], target_feature_end[i], 
+                                               p, a, b)
+                dsum += displacement * weight  # Accumulate dsum
                 wsum += weight  # Accumulate wsum
             
             # Compute the final point after weighting
-            point = psum / wsum
+            point = [x, y] + dsum / (wsum if wsum != 0 else 1)
             
             # Ensure point is within bounds
             point_x = point[0]
@@ -209,23 +207,20 @@ def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     # Calculate interpolate point which stores every line with [(start_x, start_y), (end_x, end_y)]
     for i in range(len(P1)):
         interpolate_start = PointInterpolation(P1[i], P2[i], alpha)
-        interpolate_end = PointInterpolation(Q1[i], Q2[i], alpha)
+        interpolate_end   = PointInterpolation(Q1[i], Q2[i], alpha)
         interpolate.append([interpolate_start, interpolate_end])
     # v = backward_mapping(src.img, interpolate[0][0][0], interpolate[0][0][1])
     P1_np = np.array(P1)
     Q1_np = np.array(Q1)
-    interpolate_start_np = np.array(interpolate[0][0])
-    interpolate_end_np = np.array(interpolate[0][1])
-    # print(P1[0], Q1[0], P2[0], Q2[0])
-    # interpolate[i] is the i-th line point pair
-    # print(P1[0], Q1[0])
-    # print(interpolate[0][0], interpolate[0][1], interpolate[1][0])
+    # interpolate_start_np = np.array(interpolate[0][0])
+    # interpolate_end_np = np.array(interpolate[0][1])
     inter_start_points = np.array([pair[0] for pair in interpolate])  # 提取起点
     inter_end_points = np.array([pair[1] for pair in interpolate])
-    # print(inter_end_points, inter_start_points)
-    warped_image = calculate_warp_field(src.img, P1, Q1, inter_start_points, inter_end_points)
-    # blend = blend_images(src.img, dst.img, alpha)
-    return warped_image
+    
+    warped_image_1 = calculate_warp_field(src.img, P1, Q1, inter_start_points, inter_end_points)
+    warped_image_2 = calculate_warp_field(dst.img, P2, Q2, inter_start_points, inter_end_points)
+    blend = blend_images(warped_image_1, warped_image_2, alpha)
+    return warped_image_1, warped_image_2, blend
     
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -254,29 +249,24 @@ if __name__ == "__main__":
             sys.exit(1)
 
         for i in range(len(lines1)):
-            p1 = lines1[i][0]  # Starting point of line in image 1
-            q1 = lines1[i][1]  # Ending point of line in image 1
-            p2 = lines2[i][0]  # Starting point of line in image 2
-            q2 = lines2[i][1]  # Ending point of line in image 2
-            
-            P1.append(p1)
-            Q1.append(q1)
-            P2.append(p2)
-            Q2.append(q2)
+            P1.append(lines1[i][0])
+            Q1.append(lines1[i][1])
+            P2.append(lines2[i][0])
+            Q2.append(lines2[i][1])
 
         # Convert to numpy arrays if necessary
         P1 = np.array(P1)
         Q1 = np.array(Q1)
         P2 = np.array(P2)
         Q2 = np.array(Q2)
-        # print("P1 shape:", P1.shape)
-        # print("Q1 shape:", Q1.shape)
-        # print("P2 shape:", P2.shape)
-        # print("Q2 shape:", Q2.shape)
         # Call the warp function with the points
-        result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
+        warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
+        cv2.imshow("warp_1", warp_1)
+        cv2.imwrite("warp_1.jpg", warp_1)
+        cv2.imshow("warp_2", warp_2)
+        cv2.imwrite("warp_2.jpg", warp_2)
         cv2.imshow("result", result)
-        cv2.imwrite("res.jpg", result)
+        cv2.imwrite("result.jpg", result)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         
