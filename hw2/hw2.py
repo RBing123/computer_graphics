@@ -198,6 +198,7 @@ def blend_images(warped_src, warped_dst, alpha=0.5):
     blended_image = cv2.addWeighted(warped_src, 1 - alpha, warped_dst, alpha, 0)
     return blended_image
 
+
 def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     assert len(P1)==len(Q1)==len(P2)==len(Q2)
     interpolate = []
@@ -234,7 +235,12 @@ if __name__ == "__main__":
     input("Press Enter after closing the windows...\n")  # Wait for user input after closing the windows
     for img_data in image_data_list:
         show_point(img_data)
+    
     alpha = float(input("enter the alpha value(0~1): \n"))
+    
+    # animation
+    animation=[]
+    animation_sequence=input("enter the animation sequence: \n")
     if len(image_data_list)==2:
         # Initialize lists to store points
         P1, Q1, P2, Q2 = [], [], [], []
@@ -258,14 +264,27 @@ if __name__ == "__main__":
         P2 = np.array(P2)
         Q2 = np.array(Q2)
         # Call the warp function with the points
-        warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
-        cv2.imshow("warp_1", warp_1)
-        cv2.imwrite("warp_1.jpg", warp_1)
-        cv2.imshow("warp_2", warp_2)
-        cv2.imwrite("warp_2.jpg", warp_2)
-        cv2.imshow("result", result)
-        cv2.imwrite("result.jpg", result)
-        cv2.waitKey(0)
+        # warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
+        warp_1, warp_2, result= 0, 0, 0
+        for i in np.arange(0, 1.1, 0.1):
+            warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, i)
+            animation.append(result)
+            cv2.imwrite(f"animation/{int(i*10)}.jpg", result)
+        # cv2.imshow("warp_1", warp_1)
+        # cv2.imwrite("warp_1.jpg", warp_1)
+        # cv2.imshow("warp_2", warp_2)
+        # cv2.imwrite("warp_2.jpg", warp_2)
+        # cv2.imshow("result", result)
+        # cv2.imwrite("result.jpg", result)
+        while(True):
+            for img in animation:
+                cv2.imshow('Animation', img)
+                
+                if cv2.waitKey(300) & 0xFF == ord('q'):
+                    break
+            if cv2.waitKey(300) & 0xFF == ord('q'):
+                break
+        # cv2.waitKey(0)
         cv2.destroyAllWindows()
         
     elif len(image_data_list)<=0:
