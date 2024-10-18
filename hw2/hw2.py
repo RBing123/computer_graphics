@@ -4,6 +4,8 @@ import sys
 import threading
 from scipy.ndimage import map_coordinates
 import math
+import imageio
+
 # Initialize variables for storing points
 drawing = False  # True if the mouse is pressed
 ix, iy = -1, -1  # Initial positions
@@ -171,13 +173,7 @@ def calculate_warp_field(img, src_feature_start, src_feature_end, target_feature
             # Ensure point is within bounds
             point_x = point[0]
             point_y = point[1]
-
-            # # If point[0] or point[1] are arrays, flatten them or take their first element
-            # if isinstance(point_x, np.ndarray):
-            #     point_x = point_x[0]
-            # if isinstance(point_y, np.ndarray):
-            #     point_y = point_y[0]
-
+            
             # Clamping point to image boundaries
             point_x = float(point[0])
             point_y = float(point[1])
@@ -208,11 +204,7 @@ def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
         interpolate_start = PointInterpolation(P1[i], P2[i], alpha)
         interpolate_end   = PointInterpolation(Q1[i], Q2[i], alpha)
         interpolate.append([interpolate_start, interpolate_end])
-    # v = backward_mapping(src.img, interpolate[0][0][0], interpolate[0][0][1])
-    P1_np = np.array(P1)
-    Q1_np = np.array(Q1)
-    # interpolate_start_np = np.array(interpolate[0][0])
-    # interpolate_end_np = np.array(interpolate[0][1])
+
     inter_start_points = np.array([pair[0] for pair in interpolate])  # 提取起点
     inter_end_points = np.array([pair[1] for pair in interpolate])
     
@@ -220,7 +212,11 @@ def warp(src, dst, P1, Q1, P2, Q2, alpha=0.4):
     warped_image_2 = calculate_warp_field(dst.img, P2, Q2, inter_start_points, inter_end_points)
     blend = blend_images(warped_image_1, warped_image_2, alpha)
     return warped_image_1, warped_image_2, blend
-    
+
+def frame_to_gif(frame_list, s):
+    rgb_frames = [cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) for frame in frame_list]
+    gif = imageio.mimsave(f'C:/Users/User/Desktop/成大/hw2/hw2/animation/{s}.gif', rgb_frames, 'GIF', fps = 3)
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python hw2.py <image_path1> <image_path2>")
@@ -239,8 +235,7 @@ if __name__ == "__main__":
     alpha = float(input("enter the alpha value(0~1): \n"))
     
     # animation
-    animation=[]
-    animation_sequence=input("enter the animation sequence: \n")
+    do_anima = input("Show animate?(0 for no, 1 for yes): \n")
     if len(image_data_list)==2:
         # Initialize lists to store points
         P1, Q1, P2, Q2 = [], [], [], []
@@ -266,28 +261,39 @@ if __name__ == "__main__":
         # Call the warp function with the points
         # warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
         warp_1, warp_2, result= 0, 0, 0
-        for i in np.arange(0, 1.1, 0.1):
-            warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, i)
-            animation.append(result)
-            cv2.imwrite(f"animation/{int(i*10)}.jpg", result)
-        # cv2.imshow("warp_1", warp_1)
-        # cv2.imwrite("warp_1.jpg", warp_1)
-        # cv2.imshow("warp_2", warp_2)
-        # cv2.imwrite("warp_2.jpg", warp_2)
-        # cv2.imshow("result", result)
-        # cv2.imwrite("result.jpg", result)
-        while(True):
-            for img in animation:
-                cv2.imshow('Animation', img)
-                
+        if do_anima == '1':
+            animation=[]
+            res_1, res_2=[], []
+            while(True):
+                for i in np.arange(0, 1.1, 0.1):
+                    warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, i)
+                    animation.append(result)
+                    res_1.append(warp_1)
+                    res_2.append(warp_2)
+                    cv2.imwrite(f"animation/{int(i*10)}.jpg", result)
+                    cv2.imwrite(f"animation/image_1_{int(i*10)}.jpg", warp_1)
+                    cv2.imwrite(f"animation/image_2_{int(i*10)}.jpg", warp_2)
+                for img in animation:
+                    cv2.imshow('Animation', img)
+                    if cv2.waitKey(300) & 0xFF == ord('q'):
+                        break
+                frame_to_gif(animation, 'animation')
+                frame_to_gif(res_1, 'warp_1')
+                frame_to_gif(res_2, 'warp_2')
                 if cv2.waitKey(300) & 0xFF == ord('q'):
                     break
-            if cv2.waitKey(300) & 0xFF == ord('q'):
-                break
-        # cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        elif do_anima == '0':
+            warp_1, warp_2, result = warp(image_data_list[0], image_data_list[1], P1, Q1, P2, Q2, alpha)
+            cv2.imshow("warp_1", warp_1)
+            cv2.imshow("warp_2", warp_2)
+            cv2.imshow("result", result)
+            
+            cv2.imwrite("res/warp_1.jpg", warp_1)
+            cv2.imwrite("res/warp_2.jpg", warp_2)
+            cv2.imwrite("res/result.jpg", result)
+            
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
         
     elif len(image_data_list)<=0:
         print(f"Error image data size {len(image_data_list)}")
-    # else:
-    #     warp()
