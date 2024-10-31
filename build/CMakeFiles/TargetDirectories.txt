@@ -1,0 +1,3 @@
+/mnt/c/users/user/Desktop/成大/碩士/computer_graphics/hw3/build/CMakeFiles/test.dir
+/mnt/c/users/user/Desktop/成大/碩士/computer_graphics/hw3/build/CMakeFiles/edit_cache.dir
+/mnt/c/users/user/Desktop/成大/碩士/computer_graphics/hw3/build/CMakeFiles/rebuild_cache.dir
