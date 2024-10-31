@@ -6,10 +6,23 @@
 #include <iostream>
 #include <cmath>
 // 全局變量
-float baseAngle = 0.0f;      // 基座旋轉角度
-float upperArmAngle = 0.0f;  // 上臂旋轉角度
-float foreArmAngle = 0.0f;   // 前臂旋轉角度
-float cameraRotation = 0.0f; // 攝像機旋轉角度
+float bodyAngle = 0.0f;       // 身體旋轉角度
+float leftUpperArmAngle = 0.0f;   // 左上臂角度
+float leftForeArmAngle = 0.0f;    // 左前臂角度
+float rightUpperArmAngle = 0.0f;  // 右上臂角度
+float rightForeArmAngle = 0.0f;   // 右前臂角度
+float cameraRotation = 0.0f;      // 攝像機角度
+const float MAX_UPPER_ARM_ANGLE = 90.0f;  // 上臂最大角度
+const float MIN_UPPER_ARM_ANGLE = -45.0f;  // 上臂最小角度
+const float MAX_FORE_ARM_ANGLE = 0.0f;   // 前臂最大角度
+const float MIN_FORE_ARM_ANGLE = -145.0f;  // 前臂最小角度
+
+// 輔助函數：限制角度在指定範圍內
+float clampAngle(float angle, float min, float max) {
+    if (angle > max) return max;
+    if (angle < min) return min;
+    return angle;
+}
 // 頂點著色器
 const char *vertexShaderSource = R"(
     #version 330 core
@@ -184,36 +197,61 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     
-    // 基座旋轉
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        baseAngle += 1.0f;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        baseAngle -= 1.0f;
+    // 身體旋轉
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+        bodyAngle += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+        bodyAngle -= 1.0f;
     
-    // 上臂旋轉
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        upperArmAngle += 1.0f;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        upperArmAngle -= 1.0f;
-    
-    // 前臂旋轉
+    // 左臂控制（帶角度限制）
+    float oldLeftUpperAngle = leftUpperArmAngle;
+    float oldLeftForeAngle = leftForeArmAngle;
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        foreArmAngle += 1.0f;
+        leftUpperArmAngle += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        leftUpperArmAngle -= 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        leftForeArmAngle += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        leftForeArmAngle -= 1.0f;
+
+    // 限制左臂角度
+    leftUpperArmAngle = clampAngle(leftUpperArmAngle, MIN_UPPER_ARM_ANGLE, MAX_UPPER_ARM_ANGLE);
+    leftForeArmAngle = clampAngle(leftForeArmAngle, MIN_FORE_ARM_ANGLE, MAX_FORE_ARM_ANGLE);
+
+    // 右臂控制（帶角度限制）
+    float oldRightUpperAngle = rightUpperArmAngle;
+    float oldRightForeAngle = rightForeArmAngle;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        foreArmAngle -= 1.0f;
+        rightUpperArmAngle += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        rightUpperArmAngle -= 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+        rightForeArmAngle += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+        rightForeArmAngle -= 1.0f;
+
+    // 限制右臂角度
+    rightUpperArmAngle = clampAngle(rightUpperArmAngle, -MAX_UPPER_ARM_ANGLE, -MIN_UPPER_ARM_ANGLE);
+    rightForeArmAngle = clampAngle(rightForeArmAngle, -MAX_FORE_ARM_ANGLE, -MIN_FORE_ARM_ANGLE);
+
+    // 攝像機控制
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        cameraRotation += 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        cameraRotation -= 1.0f;
 }
 
-void drawRobotArm(const glm::mat4& projection, const glm::mat4& view) {
+void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUseProgram(shaderProgram);
     
-    // 設置光源位置
+    // 設置光源和視點位置
     GLint lightPosLoc = glGetUniformLocation(shaderProgram, "lightPos");
-    glUniform3f(lightPosLoc, 2.0f, 3.0f, 2.0f);
-
-    // 設置視點位置
     GLint viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
+    glUniform3f(lightPosLoc, 2.0f, 3.0f, 2.0f);
     glUniform3f(viewPosLoc, 3.0f, 3.0f, 3.0f);
 
+    // 設置變換矩陣
     GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLuint viewLoc = glGetUniformLocation(shaderProgram, "view");
     GLuint projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -221,39 +259,64 @@ void drawRobotArm(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    // 儲存基礎變換矩陣
-    glm::mat4 baseTransform = glm::mat4(1.0f);
-    baseTransform = glm::translate(baseTransform, glm::vec3(0.0f, -0.5f, 0.0f));
-    baseTransform = glm::rotate(baseTransform, glm::radians(baseAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+    // 身體基礎變換
+    glm::mat4 bodyTransform = glm::mat4(1.0f);
+    bodyTransform = glm::translate(bodyTransform, glm::vec3(0.0f, 0.0f, 0.0f));
+    bodyTransform = glm::rotate(bodyTransform, glm::radians(bodyAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    // 繪製基座
-    glm::mat4 model = baseTransform;
-    model = glm::scale(model, glm::vec3(0.6f, 0.2f, 0.6f));
+    // 繪製身體
+    glm::mat4 model = bodyTransform;
+    model = glm::scale(model, glm::vec3(0.8f, 1.5f, 0.5f));  // 較大的身體
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
-    // 上臂的基礎變換
-    glm::mat4 upperArmTransform = baseTransform;
-    upperArmTransform = glm::translate(upperArmTransform, glm::vec3(0.0f, 0.1f, 0.0f));
-    upperArmTransform = glm::rotate(upperArmTransform, glm::radians(upperArmAngle), glm::vec3(0.0f, 0.0f, 1.0f));
-
-    // 繪製上臂
-    model = upperArmTransform;
-    model = glm::scale(model, glm::vec3(0.1f, 0.5f, 0.1f));
+    // 繪製頭部
+    model = bodyTransform;
+    model = glm::translate(model, glm::vec3(0.0f, 0.9f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
-    // 前臂的基礎變換
-    glm::mat4 foreArmTransform = upperArmTransform;
-    foreArmTransform = glm::translate(foreArmTransform, glm::vec3(0.0f, 0.5f, 0.0f));
-    foreArmTransform = glm::rotate(foreArmTransform, glm::radians(foreArmAngle), glm::vec3(0.0f, 0.0f, 1.0f));
-
-    // 繪製前臂
-    model = foreArmTransform;
-    model = glm::scale(model, glm::vec3(0.1f, 0.3f, 0.1f));
+    // 左臂
+    glm::mat4 leftUpperArmTransform = bodyTransform;
+    leftUpperArmTransform = glm::translate(leftUpperArmTransform, glm::vec3(-0.5f, 0.45f, 0.0f));
+    leftUpperArmTransform = glm::rotate(leftUpperArmTransform, glm::radians(leftUpperArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+    
+    model = leftUpperArmTransform;
+    model = glm::scale(model, glm::vec3(0.2f, 0.6f, 0.2f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glDrawArrays(GL_TRIANGLES, 0, 36);
-}
+
+    // 左前臂 - 調整連接點
+    glm::mat4 leftForeArmTransform = leftUpperArmTransform;
+    leftForeArmTransform = glm::translate(leftForeArmTransform, glm::vec3(0.0f, -0.4f, 0.0f));  // 調整連接點
+    leftForeArmTransform = glm::rotate(leftForeArmTransform, glm::radians(leftForeArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+    
+    model = leftForeArmTransform;
+    model = glm::scale(model, glm::vec3(0.15f, 0.3f, 0.15f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    // 右臂 - 調整初始位置和旋轉軸
+    glm::mat4 rightUpperArmTransform = bodyTransform;
+    rightUpperArmTransform = glm::translate(rightUpperArmTransform, glm::vec3(0.5f, 0.45f, 0.0f));
+    rightUpperArmTransform = glm::rotate(rightUpperArmTransform, glm::radians(rightUpperArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+    
+    model = rightUpperArmTransform;
+    model = glm::scale(model, glm::vec3(0.2f, 0.6f, 0.2f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    // 右前臂 - 調整連接點
+    glm::mat4 rightForeArmTransform = rightUpperArmTransform;
+    rightForeArmTransform = glm::translate(rightForeArmTransform, glm::vec3(0.0f, -0.4f, 0.0f));  // 調整連接點
+    rightForeArmTransform = glm::rotate(rightForeArmTransform, glm::radians(rightForeArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+    
+    model = rightForeArmTransform;
+    model = glm::scale(model, glm::vec3(0.15f, 0.3f, 0.15f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
 int main() {
     // 初始化 GLFW
@@ -290,21 +353,21 @@ int main() {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // 創建視圖矩陣
-        float radius = 5.0f;
+        // 視圖矩陣
+        float radius = 5.0f;  // 增加攝像機距離
         float camX = radius * sin(glm::radians(cameraRotation));
         float camZ = radius * cos(glm::radians(cameraRotation));
         glm::mat4 view = glm::lookAt(
-            glm::vec3(camX, 2.0f, camZ), // 攝像機位置
-            glm::vec3(0.0f, 0.0f, 0.0f),  // 目標位置
-            glm::vec3(0.0f, 1.0f, 0.0f)   // 上向量
+            glm::vec3(camX, 2.0f, camZ),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f)
         );
 
-        // 創建投影矩陣
+        // 投影矩陣
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f/600.0f, 0.1f, 100.0f);
 
-        // 繪製機器人手臂
-        drawRobotArm(projection, view);
+        // 繪製機器人
+        drawRobot(projection, view);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
