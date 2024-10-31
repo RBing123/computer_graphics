@@ -272,19 +272,28 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     leftUpperArmTransform = glm::rotate(leftUpperArmTransform, glm::radians(leftUpperArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
     
     model = leftUpperArmTransform;
-    model = glm::scale(model, glm::vec3(0.2f, 0.4f, 0.2f));
+    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 上臂位置調整
+    model = glm::scale(model, glm::vec3(0.2f, 0.3f, 0.2f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);  // 銀色上臂
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    // 左肘關節（球形）
+    model = leftUpperArmTransform;
+    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));  // 調整關節位置
+    model = glm::scale(model, glm::vec3(0.12f, 0.12f, 0.12f));  // 稍微縮小關節
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.5f, 0.5f, 0.5f);  // 深灰色關節
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
     // 左前臂
     glm::mat4 leftForeArmTransform = leftUpperArmTransform;
-    leftForeArmTransform = glm::translate(leftForeArmTransform, glm::vec3(0.0f, -0.4f, 0.0f));
+    leftForeArmTransform = glm::translate(leftForeArmTransform, glm::vec3(0.0f, -0.3f, 0.0f));
     leftForeArmTransform = glm::rotate(leftForeArmTransform, glm::radians(leftForeArmAngle), glm::vec3(-1.0f, 0.0f, 0.0f));
     
     model = leftForeArmTransform;
-    model = glm::translate(model, glm::vec3(0.0f, -0.2f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.15f, 0.4f, 0.15f));
+    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 調整前臂位置
+    model = glm::scale(model, glm::vec3(0.15f, 0.3f, 0.15f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.0f, 0.8f, 0.0f);  // 綠色前臂
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -295,19 +304,28 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     rightUpperArmTransform = glm::rotate(rightUpperArmTransform, glm::radians(rightUpperArmAngle), glm::vec3(1.0f, 0.0f, 0.0f));
     
     model = rightUpperArmTransform;
-    model = glm::scale(model, glm::vec3(0.2f, 0.4f, 0.2f));
+    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 上臂位置調整
+    model = glm::scale(model, glm::vec3(0.2f, 0.3f, 0.2f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);  // 銀色上臂
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    // 右肘關節（球形）
+    model = rightUpperArmTransform;
+    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));  // 調整關節位置
+    model = glm::scale(model, glm::vec3(0.12f, 0.12f, 0.12f));  // 稍微縮小關節
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.5f, 0.5f, 0.5f);  // 深灰色關節
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
     // 右前臂
     glm::mat4 rightForeArmTransform = rightUpperArmTransform;
-    rightForeArmTransform = glm::translate(rightForeArmTransform, glm::vec3(0.0f, -0.4f, 0.0f));
+    rightForeArmTransform = glm::translate(rightForeArmTransform, glm::vec3(0.0f, -0.3f, 0.0f));
     rightForeArmTransform = glm::rotate(rightForeArmTransform, glm::radians(rightForeArmAngle), glm::vec3(-1.0f, 0.0f, 0.0f));
     
     model = rightForeArmTransform;
-    model = glm::translate(model, glm::vec3(0.0f, -0.2f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.15f, 0.4f, 0.15f));
+    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 調整前臂位置
+    model = glm::scale(model, glm::vec3(0.15f, 0.3f, 0.15f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.0f, 0.8f, 0.0f);  // 綠色前臂
     glDrawArrays(GL_TRIANGLES, 0, 36);
