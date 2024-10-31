@@ -110,15 +110,19 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
   /usr/include/c++/11/bits/range_access.h \
   /usr/include/c++/11/bits/std_abs.h \
   /usr/include/c++/11/bits/stl_algobase.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
   /usr/include/c++/11/bits/stl_construct.h \
   /usr/include/c++/11/bits/stl_function.h \
   /usr/include/c++/11/bits/stl_iterator.h \
   /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/11/bits/stl_iterator_base_types.h \
   /usr/include/c++/11/bits/stl_pair.h \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
   /usr/include/c++/11/bits/streambuf.tcc \
   /usr/include/c++/11/bits/streambuf_iterator.h \
   /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/vector.tcc \
   /usr/include/c++/11/cassert \
   /usr/include/c++/11/cctype \
   /usr/include/c++/11/cerrno \
@@ -156,6 +160,7 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
   /usr/include/c++/11/system_error \
   /usr/include/c++/11/type_traits \
   /usr/include/c++/11/typeinfo \
+  /usr/include/c++/11/vector \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -517,8 +522,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/x86_64-linux-gnu/asm/errno.h:
 
-/usr/include/wchar.h:
-
 /usr/include/time.h:
 
 /usr/include/sched.h:
@@ -625,9 +628,13 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/glm/ext/scalar_constants.hpp:
 
-/usr/include/glm/ext/scalar_constants.inl:
+/usr/include/glm/ext/quaternion_trigonometric.hpp:
 
-/usr/include/c++/11/cstddef:
+/usr/include/glm/ext/quaternion_transform.inl:
+
+/usr/include/glm/ext/quaternion_transform.hpp:
+
+/usr/include/glm/ext/quaternion_relational.inl:
 
 /usr/include/c++/11/cassert:
 
@@ -638,6 +645,16 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/c++/11/bits/stringfwd.h:
 
 /usr/include/glm/ext/matrix_float2x2_precision.hpp:
+
+/usr/include/c++/11/bits/stl_vector.h:
+
+/usr/include/c++/11/bits/streambuf.tcc:
+
+/usr/include/c++/11/bits/vector.tcc:
+
+/usr/include/c++/11/bits/stl_uninitialized.h:
+
+/usr/include/c++/11/bits/concept_check.h:
 
 /usr/include/c++/11/bits/char_traits.h:
 
@@ -683,17 +700,11 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/c++/11/bits/locale_classes.tcc:
 
-/usr/include/glm/ext/matrix_float4x4_precision.hpp:
-
-/usr/include/c++/11/bits/streambuf.tcc:
+/usr/include/x86_64-linux-gnu/bits/dlfcn.h:
 
 /usr/include/glm/ext/matrix_double2x4.hpp:
 
-/usr/include/x86_64-linux-gnu/bits/dlfcn.h:
-
-/usr/include/c++/11/cstdint:
-
-/usr/include/glm/detail/type_mat3x3.inl:
+/usr/include/glm/ext/matrix_float4x4_precision.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
 
@@ -709,10 +720,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
 
-/usr/include/glm/detail/type_mat2x4.inl:
-
-/usr/include/c++/11/bits/nested_exception.h:
-
 /usr/include/c++/11/bits/stl_iterator.h:
 
 /mnt/c/users/user/Desktop/成大/碩士/computer_graphics/hw3/glad.c:
@@ -724,8 +731,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/c++/11/bits/cpp_type_traits.h:
 
 /usr/local/include/glad/glad.h:
-
-/usr/include/c++/11/bits/concept_check.h:
 
 /usr/include/c++/11/bits/basic_string.tcc:
 
@@ -847,6 +852,10 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/x86_64-linux-gnu/bits/endianness.h:
 
+/usr/include/glm/ext/quaternion_relational.hpp:
+
+/usr/include/c++/11/ext/string_conversions.h:
+
 /usr/include/glm/detail/type_mat3x2.inl:
 
 /usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
@@ -868,6 +877,8 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/linux/errno.h:
 
 /usr/include/x86_64-linux-gnu/sys/types.h:
+
+/usr/include/c++/11/bits/stl_bvector.h:
 
 /usr/include/glm/detail/compute_vector_relational.hpp:
 
@@ -929,20 +940,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/c++/11/ios:
 
-/usr/include/c++/11/cstdlib:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
-
-/usr/include/c++/11/bits/allocator.h:
-
-/usr/include/glm/ext/vector_int3_sized.hpp:
-
-/usr/include/glm/ext/vector_int2.hpp:
-
-/usr/include/c++/11/type_traits:
-
 /usr/include/x86_64-linux-gnu/bits/types/locale_t.h:
 
 /usr/include/c++/11/bits/stl_pair.h:
@@ -977,6 +974,20 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/c++/11/bits/stl_iterator_base_funcs.h:
 
+/usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
+
+/usr/include/c++/11/bits/allocator.h:
+
+/usr/include/c++/11/cstdlib:
+
+/usr/include/glm/ext/vector_int3_sized.hpp:
+
+/usr/include/glm/ext/vector_int2.hpp:
+
+/usr/include/c++/11/type_traits:
+
 /usr/include/glm/ext/vector_int1.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
@@ -997,6 +1008,10 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
 
+/usr/include/c++/11/cstdint:
+
+/usr/include/glm/detail/type_mat3x3.inl:
+
 /usr/include/c++/11/bits/postypes.h:
 
 /usr/include/glm/ext/matrix_double4x4.hpp:
@@ -1004,6 +1019,14 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/glm/ext/quaternion_geometric.inl:
 
 /usr/include/x86_64-linux-gnu/gnu/stubs.h:
+
+/usr/include/glm/ext/scalar_constants.inl:
+
+/usr/include/c++/11/cstddef:
+
+/usr/include/c++/11/bits/nested_exception.h:
+
+/usr/include/glm/detail/type_mat2x4.inl:
 
 /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
 
@@ -1032,8 +1055,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/endian.h:
 
 /usr/include/glm/detail/type_vec3.hpp:
-
-/usr/include/glm/ext/quaternion_transform.hpp:
 
 /usr/include/c++/11/ext/type_traits.h:
 
@@ -1074,6 +1095,12 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/glm/ext/vector_double3.hpp:
 
 /usr/include/c++/11/system_error:
+
+/usr/include/wchar.h:
+
+/usr/include/c++/11/vector:
+
+/usr/include/glm/ext/quaternion_common.inl:
 
 /usr/include/errno.h:
 
@@ -1201,8 +1228,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/glm/ext/matrix_double4x4_precision.hpp:
 
-/usr/include/glm/ext/quaternion_transform.inl:
-
 /usr/include/glm/ext/matrix_float2x3.hpp:
 
 /usr/include/glm/ext/vector_uint2.hpp:
@@ -1223,8 +1248,6 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 
 /usr/include/glm/ext/matrix_float4x2.hpp:
 
-/usr/include/glm/ext/quaternion_relational.inl:
-
 /usr/include/glm/ext/matrix_float3x3_precision.hpp:
 
 /usr/include/glm/ext/matrix_float4x3_precision.hpp:
@@ -1240,11 +1263,3 @@ CMakeFiles/test.dir/main.cpp.o: /mnt/c/users/user/Desktop/成大/碩士/computer
 /usr/include/glm/ext/matrix_projection.hpp:
 
 /usr/include/glm/ext/matrix_transform.hpp:
-
-/usr/include/glm/ext/quaternion_common.inl:
-
-/usr/include/c++/11/ext/string_conversions.h:
-
-/usr/include/glm/ext/quaternion_relational.hpp:
-
-/usr/include/glm/ext/quaternion_trigonometric.hpp:

@@ -5,6 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <cmath>
+#include <vector>
 // 全局變量
 float bodyAngle = 0.0f;       // 身體旋轉角度
 float leftUpperArmAngle = 0.0f;   // 左上臂角度
@@ -14,9 +15,11 @@ float rightForeArmAngle = 0.0f;   // 右前臂角度
 float cameraRotation = 0.0f;      // 攝像機角度
 const float MAX_UPPER_ARM_ANGLE = 45.0f;   // 上臂最大角度
 const float MIN_UPPER_ARM_ANGLE = -90.0f;  // 上臂最小角度
-const float MAX_FORE_ARM_ANGLE = 120.0f;   // 前臂最大角度
-const float MIN_FORE_ARM_ANGLE = -5.0f;    // 前臂最小角度
-
+const float MAX_FORE_ARM_ANGLE = 45.0f;   // 前臂最大角度
+const float MIN_FORE_ARM_ANGLE = 0.0f;    // 前臂最小角度
+GLuint sphereVAO, sphereVBO, sphereEBO;
+std::vector<float> sphereVertices;
+std::vector<GLuint> sphereIndices;
 // 輔助函數：限制角度在指定範圍內
 float clampAngle(float angle, float min, float max) {
     if (angle > max) return max;
@@ -167,7 +170,74 @@ void createCube() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 }
+void initSphere(float radius, int stacks, int sectors) {
+    sphereVertices.clear();
+    sphereIndices.clear();
+    
+    // 生成頂點
+    float stackStep = M_PI / stacks;
+    float sectorStep = 2 * M_PI / sectors;
 
+    for (int i = 0; i <= stacks; ++i) {
+        float phi = M_PI / 2 - i * stackStep;
+        float xy = radius * cosf(phi);
+        float z = radius * sinf(phi);
+
+        for (int j = 0; j <= sectors; ++j) {
+            float theta = j * sectorStep;
+            float x = xy * cosf(theta);
+            float y = xy * sinf(theta);
+            
+            // 添加頂點坐標
+            sphereVertices.push_back(x);
+            sphereVertices.push_back(y);
+            sphereVertices.push_back(z);
+        }
+    }
+
+    // 生成索引
+    for (int i = 0; i < stacks; ++i) {
+        int k1 = i * (sectors + 1);
+        int k2 = k1 + sectors + 1;
+
+        for (int j = 0; j < sectors; ++j, ++k1, ++k2) {
+            if (i != 0) {
+                sphereIndices.push_back(k1);
+                sphereIndices.push_back(k2);
+                sphereIndices.push_back(k1 + 1);
+            }
+
+            if (i != (stacks - 1)) {
+                sphereIndices.push_back(k1 + 1);
+                sphereIndices.push_back(k2);
+                sphereIndices.push_back(k2 + 1);
+            }
+        }
+    }
+
+    // 創建並設置 VAO/VBO/EBO
+    glGenVertexArrays(1, &sphereVAO);
+    glGenBuffers(1, &sphereVBO);
+    glGenBuffers(1, &sphereEBO);
+
+    glBindVertexArray(sphereVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
+    glBufferData(GL_ARRAY_BUFFER, sphereVertices.size() * sizeof(float), sphereVertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphereIndices.size() * sizeof(unsigned int), sphereIndices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+}
+void drawSphere() {
+    glBindVertexArray(sphereVAO);
+    glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -181,9 +251,9 @@ void processInput(GLFWwindow *window) {
         bodyAngle -= rotationSpeed;
     
     // 左手臂控制
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        leftUpperArmAngle += rotationSpeed;  // 向後抬
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        leftUpperArmAngle += rotationSpeed;  // 向後抬
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
         leftUpperArmAngle -= rotationSpeed;  // 向前放
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         leftForeArmAngle += rotationSpeed;   // 手肘彎曲
@@ -231,6 +301,8 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     baseTransform = glm::translate(baseTransform, glm::vec3(0.0f, 0.0f, 0.0f));
     baseTransform = glm::rotate(baseTransform, glm::radians(bodyAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 
+    glBindVertexArray(VAO);  // 綁定立方體的VAO
+    
     // 1. 身體核心部分
     // 上身軀幹（胸甲）
     glm::mat4 model = baseTransform;
@@ -273,31 +345,40 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     
     model = leftUpperArmTransform;
     model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 上臂位置調整
-    model = glm::scale(model, glm::vec3(0.2f, 0.3f, 0.2f));
+    model = glm::scale(model, glm::vec3(0.1f, 0.3f, 0.1f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);  // 銀色上臂
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    glBindVertexArray(sphereVAO);
     // 左肘關節（球形）
     model = leftUpperArmTransform;
-    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));  // 調整關節位置
-    model = glm::scale(model, glm::vec3(0.12f, 0.12f, 0.12f));  // 稍微縮小關節
+    model = glm::translate(model, glm::vec3(0.0f, -0.35f, 0.0f));  // 調整關節位置
+    model = glm::scale(model, glm::vec3(0.55f, 0.55f, 0.55f));  // 稍微縮小關節
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.5f, 0.5f, 0.5f);  // 深灰色關節
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    drawSphere();
 
+    glBindVertexArray(VAO);
     // 左前臂
     glm::mat4 leftForeArmTransform = leftUpperArmTransform;
-    leftForeArmTransform = glm::translate(leftForeArmTransform, glm::vec3(0.0f, -0.3f, 0.0f));
+    leftForeArmTransform = glm::translate(leftForeArmTransform, glm::vec3(0.0f, -0.35f, 0.0f));
     leftForeArmTransform = glm::rotate(leftForeArmTransform, glm::radians(leftForeArmAngle), glm::vec3(-1.0f, 0.0f, 0.0f));
-    
+
+    float sphereRadius = 0.55f * 0.1f;
+    float forearmOffsetY = -sphereRadius * cos(glm::radians(leftForeArmAngle));
+    float forearmOffsetZ = sphereRadius * sin(glm::radians(leftForeArmAngle));
+    leftForeArmTransform = glm::translate(leftForeArmTransform, 
+    glm::vec3(0.0f, forearmOffsetY, forearmOffsetZ));
+    leftForeArmTransform = glm::rotate(leftForeArmTransform, glm::radians(leftForeArmAngle), glm::vec3(-1.0f, 0.0f, 0.0f));
+
+    // 繪製前臂
     model = leftForeArmTransform;
-    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 調整前臂位置
+    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));
     model = glm::scale(model, glm::vec3(0.15f, 0.3f, 0.15f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.0f, 0.8f, 0.0f);  // 綠色前臂
+    glUniform3f(colorLoc, 0.0f, 0.8f, 0.0f);
     glDrawArrays(GL_TRIANGLES, 0, 36);
-
     // 右上臂
     glm::mat4 rightUpperArmTransform = baseTransform;
     rightUpperArmTransform = glm::translate(rightUpperArmTransform, glm::vec3(0.4f, 0.6f, 0.0f));
@@ -305,29 +386,38 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     
     model = rightUpperArmTransform;
     model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 上臂位置調整
-    model = glm::scale(model, glm::vec3(0.2f, 0.3f, 0.2f));
+    model = glm::scale(model, glm::vec3(0.1f, 0.3f, 0.1f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);  // 銀色上臂
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    glBindVertexArray(sphereVAO);
     // 右肘關節（球形）
     model = rightUpperArmTransform;
-    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));  // 調整關節位置
-    model = glm::scale(model, glm::vec3(0.12f, 0.12f, 0.12f));  // 稍微縮小關節
+    model = glm::translate(model, glm::vec3(0.0f, -0.35f, 0.0f));  // 調整關節位置
+    model = glm::scale(model, glm::vec3(0.55f, 0.55f, 0.55f));  // 稍微縮小關節
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.5f, 0.5f, 0.5f);  // 深灰色關節
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    drawSphere();
 
+    glBindVertexArray(VAO);
     // 右前臂
     glm::mat4 rightForeArmTransform = rightUpperArmTransform;
-    rightForeArmTransform = glm::translate(rightForeArmTransform, glm::vec3(0.0f, -0.3f, 0.0f));
+    rightForeArmTransform = glm::translate(rightForeArmTransform, glm::vec3(0.0f, -0.35f, 0.0f));
     rightForeArmTransform = glm::rotate(rightForeArmTransform, glm::radians(rightForeArmAngle), glm::vec3(-1.0f, 0.0f, 0.0f));
     
+    float rforearmOffsetY = -sphereRadius * cos(glm::radians(rightForeArmAngle));
+    float rforearmOffsetZ = sphereRadius * sin(glm::radians(rightForeArmAngle));
+    rightForeArmTransform = glm::translate(rightForeArmTransform, 
+    glm::vec3(0.0f, rforearmOffsetY, rforearmOffsetZ));
+    rightForeArmTransform = glm::rotate(rightForeArmTransform, glm::radians(rightForeArmAngle), glm::vec3(-1.0f, 0.0f, 0.0f));
+    
+    // 繪製前臂
     model = rightForeArmTransform;
-    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));  // 調整前臂位置
+    model = glm::translate(model, glm::vec3(0.0f, -0.15f, 0.0f));
     model = glm::scale(model, glm::vec3(0.15f, 0.3f, 0.15f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.0f, 0.8f, 0.0f);  // 綠色前臂
+    glUniform3f(colorLoc, 0.0f, 0.8f, 0.0f);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
@@ -355,7 +445,7 @@ int main() {
 
     // 初始化著色器
     initShaders();
-
+    initSphere(0.1f, 20, 20);
     createCube();
     glEnable(GL_DEPTH_TEST);
 
@@ -389,6 +479,9 @@ int main() {
     // 清理資源
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+    glDeleteVertexArrays(1, &sphereVAO);
+    glDeleteBuffers(1, &sphereVBO);
+    glDeleteBuffers(1, &sphereEBO);
     glDeleteProgram(shaderProgram);
 
     glfwTerminate();
