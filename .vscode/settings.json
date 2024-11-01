@@ -4,6 +4,7 @@
         "stdlib.h": "c",
         "iostream": "cpp",
         "string": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "vector": "cpp"
     }
 }
