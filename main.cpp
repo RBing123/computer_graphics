@@ -606,7 +606,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     GLuint viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
 
     // 設置光源位置和攝像機位置
-    glm::vec3 lightPos(1.0f, 2.0f, 2.0f);  // 光源位置
+    glm::vec3 lightPos(1.0f, 1.0f, 1.0f);  // 光源位置
     glm::vec3 viewPos(0.0f, 0.0f, 3.0f);   // 攝像機位置
     
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -627,7 +627,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     model = glm::translate(model, glm::vec3(0.0f, 0.6f, 0.0f));
     model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.3f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.06f, 0.313f, 0.341f);  // 深藍色胸甲
+    glUniform3f(colorLoc, 0.45f, 0.329f, 0.26f);  // 深藍色胸甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     // 胸部中央裝甲（白色部分）
@@ -1036,7 +1036,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // 使圓錐台垂直
     model = glm::scale(model, glm::vec3(0.08f, 0.4f, 0.08f));       // 調整大小
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 1.0f, 0.56f, 0.82f);  // 與大腿相同的綠色
+    glUniform3f(colorLoc, 0.407f, 0.509f, 0.549f);  // 與大腿相同的綠色
     drawCone();
     // left feet
     model = leftKneeTransform;
@@ -1053,7 +1053,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::scale(model, glm::vec3(0.08f, 0.4f, 0.08f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 1.0f, 0.56f, 0.82f);
+    glUniform3f(colorLoc, 0.407f, 0.509f, 0.549f);
     drawCone();
     // right feet
     model = rightKneeTransform;
