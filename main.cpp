@@ -828,7 +828,13 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.568f, 0.568f, 0.317f);  // 橙色肩甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
-
+    // 左肩裝甲板
+    model = baseTransform;
+    model = glm::translate(model, glm::vec3(0.55f, 0.8f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
+    glDrawArrays(GL_TRIANGLES, 0, 36);
     // joint
     glBindVertexArray(sphereVAO);
     glm::mat4 rightShoulderTransform = baseTransform;
