@@ -30,6 +30,15 @@ float leftFingerUpperAngle = -20.0f;   // 左手手指上段角度
 float leftFingerLowerAngle = 0.0f;   // 左手手指下段角度
 float rightFingerUpperAngle = -20.0f;  // 右手手指上段角度
 float rightFingerLowerAngle = 0.0f;  // 右手手指下段角度
+
+float morphProgress = 0.0f;    // 0.0 是機器人形態，1.0 是飛機形態
+bool isTransforming = false;   // 是否正在變形
+float transformSpeed = 0.01f;  // 變形速度
+bool isPlaneForm = false;      // 目前是否為飛機形態
+float headRotationAngle = 0.0f;
+float armRotationAngle = 0.0f;
+glm::vec3 headPosition = glm::vec3(0.0f, 1.2f, -0.15f); // 新增:頭部旋轉中心位置
+
 GLuint sphereVAO, sphereVBO, sphereEBO;
 std::vector<float> sphereVertices;
 std::vector<GLuint> sphereIndices;
@@ -41,6 +50,9 @@ std::vector<float> coneVertices;
 std::vector<GLuint> coneIndices;
 GLuint quadVAO, quadVBO;
 std::vector<float> quadVertices;
+GLuint nconeVAO, nconeVBO, nconeEBO;
+std::vector<float> nconeVertices;
+std::vector<GLuint> nconeIndices;
 // 輔助函數：限制角度在指定範圍內
 float clampAngle(float angle, float min, float max) {
     if (angle > max) return max;
@@ -545,11 +557,83 @@ void createQuad() {
 
     glBindVertexArray(0);
 }
-
-// 繪製四邊形
 void drawQuad() {
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, quadVertices.size() / 6);
+    glBindVertexArray(0);
+}
+void initnCone(float radius, float height, int sectors) {
+    nconeVertices.clear();
+    nconeIndices.clear();
+
+    // 添加圓錐頂點
+    nconeVertices.push_back(0.0f);     // 頂點位置
+    nconeVertices.push_back(height);
+    nconeVertices.push_back(0.0f);
+    // 頂點法向量
+    glm::vec3 topNormal(0.0f, 1.0f, 0.0f);
+    nconeVertices.push_back(topNormal.x);
+    nconeVertices.push_back(topNormal.y);
+    nconeVertices.push_back(topNormal.z);
+
+    // 生成底部圓形的頂點
+    for (int i = 0; i <= sectors; i++) {
+        float angle = 2.0f * M_PI * i / sectors;
+        float x = radius * cos(angle);
+        float z = radius * sin(angle);
+
+        // 位置
+        nconeVertices.push_back(x);
+        nconeVertices.push_back(0.0f);
+        nconeVertices.push_back(z);
+
+        // 計算法向量
+        glm::vec3 normal = glm::normalize(glm::vec3(x, height/2.0f, z));
+        nconeVertices.push_back(normal.x);
+        nconeVertices.push_back(normal.y);
+        nconeVertices.push_back(normal.z);
+    }
+
+    // 生成索引
+    // 側面的三角形
+    for (int i = 1; i <= sectors; i++) {
+        nconeIndices.push_back(0);  // 頂點
+        nconeIndices.push_back(i);
+        nconeIndices.push_back(i % sectors + 1);
+    }
+
+    // 底部的三角形
+    for (int i = 1; i < sectors; i++) {
+        nconeIndices.push_back(1);
+        nconeIndices.push_back(i + 1);
+        nconeIndices.push_back(i);
+    }
+}
+void createnCone() {
+    glGenVertexArrays(1, &nconeVAO);
+    glGenBuffers(1, &nconeVBO);
+    glGenBuffers(1, &nconeEBO);
+
+    glBindVertexArray(nconeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, nconeVBO);
+    glBufferData(GL_ARRAY_BUFFER, nconeVertices.size() * sizeof(float), 
+                 nconeVertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, nconeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, nconeIndices.size() * sizeof(GLuint), 
+                 nconeIndices.data(), GL_STATIC_DRAW);
+
+    // 設置頂點屬性
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+}
+void drawnCone() {
+    glBindVertexArray(nconeVAO);
+    glDrawElements(GL_TRIANGLES, nconeIndices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
 void processInput(GLFWwindow *window) {
@@ -672,6 +756,30 @@ void processInput(GLFWwindow *window) {
     // 限制膝蓋角度
     leftKneeAngle = clampAngle(leftKneeAngle, 0.0f, 90.0f);   // 膝蓋只能向後彎曲
     rightKneeAngle = clampAngle(rightKneeAngle, 0.0f, 90.0f);
+
+    //
+    static bool enterPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+        if (!enterPressed) {  // 確保只在第一次按下時觸發
+            enterPressed = true;
+            isTransforming = true;
+        }
+    } else {
+        enterPressed = false;
+    }
+
+    // 更新變形進度
+    if (isTransforming) {
+        morphProgress += transformSpeed;
+        if (morphProgress >= 1.0f) {
+            morphProgress = 1.0f;
+            isTransforming = false;
+        }
+        // 計算機頭旋轉角度
+        headRotationAngle = morphProgress * 180.0f;  // 從 0 度旋轉到 180 度
+        // 手臂旋轉角度
+        armRotationAngle = morphProgress * 90.0f;
+    }
     // 限制攝影機高度範圍
     cameraHeight = glm::clamp(cameraHeight, -0.5f, 5.0f);
 }
@@ -688,7 +796,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     GLuint viewPosLoc = glGetUniformLocation(shaderProgram, "viewPos");
 
     // 設置光源位置和攝像機位置
-    glm::vec3 lightPos(1.0f, 1.0f, 1.0f);  // 光源位置
+    glm::vec3 lightPos(1.0f, 1.0f, -1.0f);  // 光源位置
     glm::vec3 viewPos(0.0f, 0.0f, 3.0f);   // 攝像機位置
     
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -722,7 +830,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
 
     // 左機翼（後部 - 逐漸變窄）
     model = baseTransform;
-    model = glm::translate(model, glm::vec3(0.1f, 1.0f, -0.2f));    // 移到背部左側
+    model = glm::translate(model, glm::vec3(0.1f, 0.8f, -0.15f));    // 移到背部左側
     model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.7f, 0.9f, 1.0f);  // 淺藍色機翼
@@ -730,7 +838,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
 
     // 左側裝飾板
     model = baseTransform;
-    model = glm::translate(model, glm::vec3(-0.9f, 1.0f, -0.2f));  // 調整位置
+    model = glm::translate(model, glm::vec3(-0.9f, 0.8f, -0.15f));  // 調整位置
     model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, glm::radians(-60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -742,7 +850,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
 
     // 主機翼（右）
     model = baseTransform;
-    model = glm::translate(model, glm::vec3(-0.1f, 1.0f, -0.2f));     // 移到背部右側
+    model = glm::translate(model, glm::vec3(-0.1f, 0.8f, -0.15f));     // 移到背部右側
     model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::scale(model, glm::vec3(-1.0f, 1.0f, 1.0f));         // X軸鏡像
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -751,7 +859,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
 
     // 右側裝飾板
     model = baseTransform;
-    model = glm::translate(model, glm::vec3(0.9f, 1.0f, -0.2f));  // 調整位置
+    model = glm::translate(model, glm::vec3(0.9f, 0.8f, -0.15f));  // 調整位置
     model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, glm::radians(60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -760,6 +868,34 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.8f, 0.95f, 1.0f);
     drawQuad();
+
+    // 駕駛
+    glm::vec3 rotationCenter = headPosition + glm::vec3(0.0f, -0.3f, -0.05f);
+    glm::mat4 headTransform = baseTransform;
+    headTransform = glm::translate(headTransform, rotationCenter);
+    headTransform = glm::rotate(headTransform, glm::radians(headRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+    headTransform = glm::translate(headTransform, glm::vec3(0.0f, 0.0f, 0.1f));
+
+    headTransform = glm::translate(headTransform, glm::vec3(0.0f, 0.5f, 0.0f));
+    
+    glBindVertexArray(sphereVAO);
+    model = headTransform;
+    model = glm::translate(model, glm::vec3(0.0f, -0.2f, 0.1f));  // 對駕駛艙進行平移
+    model = glm::translate(model, glm::vec3(0.0f, -0.5f, -0.3f));
+    model = glm::scale(model, glm::vec3(1.5f, 3.0f, 1.5f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.5f, 0.5f, 0.5f);
+    drawSphere();
+
+    // 繪製機頭，並在 headTransform 基礎上添加額外的平移
+    model = headTransform;
+    model = glm::translate(model, glm::vec3(0.0f, -0.2f, 0.1f));  // 對機頭進行平移
+    model = glm::translate(model, glm::vec3(0.0f, -0.3f, -0.4f));
+    model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.5f, 1.4f, 0.5f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);
+    drawnCone();
 
     // 頸部（圓柱形）
     glBindVertexArray(cylinderVAO);
@@ -830,13 +966,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.568f, 0.568f, 0.317f);  // 橙色肩甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
-    // 左肩裝甲板
-    // model = baseTransform;
-    // model = glm::translate(model, glm::vec3(-0.55f, 0.8f, 0.0f));
-    // model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
-    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    // glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
-    // glDrawArrays(GL_TRIANGLES, 0, 36);
+
     // 左肩關節（球形）
     glBindVertexArray(sphereVAO);
     glm::mat4 leftShoulderTransform = baseTransform;
@@ -951,13 +1081,7 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.568f, 0.568f, 0.317f);  // 橙色肩甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
-    // 左肩裝甲板
-    // model = baseTransform;
-    // model = glm::translate(model, glm::vec3(0.55f, 0.8f, 0.0f));
-    // model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
-    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    // glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
-    // glDrawArrays(GL_TRIANGLES, 0, 36);
+
     // joint
     glBindVertexArray(sphereVAO);
     glm::mat4 rightShoulderTransform = baseTransform;
@@ -1224,6 +1348,8 @@ int main() {
     // 初始化並創建機翼
     initQuad(root_front, tip_front, tip_back, root_back, 0.05f);
     createQuad();
+    initnCone(0.5f, 1.0f, 32);  // 半徑0.5，高度1.0，32個分段
+    createnCone();
 
     // glm::vec3 panel_root_front(0.0f, 0.0f, 0.0f);
     // glm::vec3 panel_tip_front(0.3f, 0.0f, -0.05f);
@@ -1269,6 +1395,9 @@ int main() {
     glDeleteBuffers(1, &sphereEBO);
     glDeleteVertexArrays(1, &quadVAO);
     glDeleteBuffers(1, &quadVBO);
+    glDeleteVertexArrays(1, &nconeVAO);
+    glDeleteBuffers(1, &nconeVBO);
+    glDeleteBuffers(1, &nconeEBO);
     glDeleteProgram(shaderProgram);
 
     glfwTerminate();
