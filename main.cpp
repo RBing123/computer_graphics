@@ -39,6 +39,8 @@ std::vector<GLuint> cylinderIndices;
 GLuint coneVAO, coneVBO, coneEBO;
 std::vector<float> coneVertices;
 std::vector<GLuint> coneIndices;
+GLuint quadVAO, quadVBO;
+std::vector<float> quadVertices;
 // 輔助函數：限制角度在指定範圍內
 float clampAngle(float angle, float min, float max) {
     if (angle > max) return max;
@@ -470,6 +472,86 @@ void drawCone() {
     glDrawElements(GL_TRIANGLES, coneIndices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
+void addVertex(std::vector<float>& vertices, const glm::vec3& pos, const glm::vec3& normal) {
+    vertices.push_back(pos.x);
+    vertices.push_back(pos.y);
+    vertices.push_back(pos.z);
+    vertices.push_back(normal.x);
+    vertices.push_back(normal.y);
+    vertices.push_back(normal.z);
+}
+void initQuad(const glm::vec3& root_front, const glm::vec3& tip_front, 
+              const glm::vec3& tip_back, const glm::vec3& root_back, float thickness) {
+    quadVertices.clear();
+    
+    // 計算法向量
+    glm::vec3 front_normal(0.0f, 1.0f, 0.0f);
+    glm::vec3 back_normal(0.0f, -1.0f, 0.0f);
+
+    // 前面
+    addVertex(quadVertices, root_front + glm::vec3(0, thickness/2, 0), front_normal);
+    addVertex(quadVertices, tip_front + glm::vec3(0, thickness/2, 0), front_normal);
+    addVertex(quadVertices, tip_back + glm::vec3(0, thickness/2, 0), front_normal);
+    addVertex(quadVertices, root_front + glm::vec3(0, thickness/2, 0), front_normal);
+    addVertex(quadVertices, tip_back + glm::vec3(0, thickness/2, 0), front_normal);
+    addVertex(quadVertices, root_back + glm::vec3(0, thickness/2, 0), front_normal);
+
+    // 後面
+    addVertex(quadVertices, root_front + glm::vec3(0, -thickness/2, 0), back_normal);
+    addVertex(quadVertices, tip_front + glm::vec3(0, -thickness/2, 0), back_normal);
+    addVertex(quadVertices, tip_back + glm::vec3(0, -thickness/2, 0), back_normal);
+    addVertex(quadVertices, root_front + glm::vec3(0, -thickness/2, 0), back_normal);
+    addVertex(quadVertices, tip_back + glm::vec3(0, -thickness/2, 0), back_normal);
+    addVertex(quadVertices, root_back + glm::vec3(0, -thickness/2, 0), back_normal);
+
+    // 側面
+    std::vector<glm::vec3> frontPoints = {root_front, tip_front, tip_back, root_back};
+    for (int i = 0; i < 4; ++i) {
+        glm::vec3 p1 = frontPoints[i];
+        glm::vec3 p2 = frontPoints[(i + 1) % 4];
+        glm::vec3 edge = p2 - p1;
+        glm::vec3 side_normal = glm::normalize(glm::cross(edge, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+        // 側面三角形1
+        addVertex(quadVertices, p1 + glm::vec3(0, thickness/2, 0), side_normal);
+        addVertex(quadVertices, p2 + glm::vec3(0, thickness/2, 0), side_normal);
+        addVertex(quadVertices, p1 + glm::vec3(0, -thickness/2, 0), side_normal);
+
+        // 側面三角形2
+        addVertex(quadVertices, p2 + glm::vec3(0, thickness/2, 0), side_normal);
+        addVertex(quadVertices, p2 + glm::vec3(0, -thickness/2, 0), side_normal);
+        addVertex(quadVertices, p1 + glm::vec3(0, -thickness/2, 0), side_normal);
+    }
+}
+
+void createQuad() {
+    // 生成並綁定VAO和VBO
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, quadVertices.size() * sizeof(float), 
+                 quadVertices.data(), GL_STATIC_DRAW);
+
+    // 設置頂點屬性
+    // 位置
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // 法線
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 
+                         (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+}
+
+// 繪製四邊形
+void drawQuad() {
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, quadVertices.size() / 6);
+    glBindVertexArray(0);
+}
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -575,8 +657,8 @@ void processInput(GLFWwindow *window) {
         rightHipAngle -= rotationSpeed;
 
     // 限制髖關節角度範圍
-    leftHipAngle = clampAngle(leftHipAngle, -45.0f, 45.0f);
-    rightHipAngle = clampAngle(rightHipAngle, -45.0f, 45.0f);
+    leftHipAngle = clampAngle(leftHipAngle, -90.0f, 45.0f);
+    rightHipAngle = clampAngle(rightHipAngle, -90.0f, 45.0f);
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
         leftKneeAngle -= rotationSpeed;  // 往前彎曲是負角度
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
@@ -637,6 +719,47 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.9f, 0.9f, 0.9f);  // 白色裝甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    // 左機翼（後部 - 逐漸變窄）
+    model = baseTransform;
+    model = glm::translate(model, glm::vec3(0.1f, 1.0f, -0.2f));    // 移到背部左側
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.7f, 0.9f, 1.0f);  // 淺藍色機翼
+    drawQuad();  // 繪製機翼
+
+    // 左側裝飾板
+    model = baseTransform;
+    model = glm::translate(model, glm::vec3(-0.9f, 1.0f, -0.2f));  // 調整位置
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(-60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(43.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.36f, 1.0f, 0.25f));      // 調整大小
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.8f, 0.95f, 1.0f);
+    drawQuad(); 
+
+    // 主機翼（右）
+    model = baseTransform;
+    model = glm::translate(model, glm::vec3(-0.1f, 1.0f, -0.2f));     // 移到背部右側
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(-1.0f, 1.0f, 1.0f));         // X軸鏡像
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.7f, 0.9f, 1.0f);  // 保持相同顏色
+    drawQuad();
+
+    // 右側裝飾板
+    model = baseTransform;
+    model = glm::translate(model, glm::vec3(0.9f, 1.0f, -0.2f));  // 調整位置
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(-43.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(-0.36f, 1.0f, 0.25f));     // 調整大小
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorLoc, 0.8f, 0.95f, 1.0f);
+    drawQuad();
 
     // 頸部（圓柱形）
     glBindVertexArray(cylinderVAO);
@@ -708,12 +831,12 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniform3f(colorLoc, 0.568f, 0.568f, 0.317f);  // 橙色肩甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
     // 左肩裝甲板
-    model = baseTransform;
-    model = glm::translate(model, glm::vec3(-0.55f, 0.8f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    // model = baseTransform;
+    // model = glm::translate(model, glm::vec3(-0.55f, 0.8f, 0.0f));
+    // model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    // glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
+    // glDrawArrays(GL_TRIANGLES, 0, 36);
     // 左肩關節（球形）
     glBindVertexArray(sphereVAO);
     glm::mat4 leftShoulderTransform = baseTransform;
@@ -829,12 +952,12 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniform3f(colorLoc, 0.568f, 0.568f, 0.317f);  // 橙色肩甲
     glDrawArrays(GL_TRIANGLES, 0, 36);
     // 左肩裝甲板
-    model = baseTransform;
-    model = glm::translate(model, glm::vec3(0.55f, 0.8f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    // model = baseTransform;
+    // model = glm::translate(model, glm::vec3(0.55f, 0.8f, 0.0f));
+    // model = glm::scale(model, glm::vec3(0.1f, 0.4f, 0.3f));  // 扁平的長方形
+    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    // glUniform3f(colorLoc, 0.4f, 0.4f, 0.4f);  // 深灰色裝甲
+    // glDrawArrays(GL_TRIANGLES, 0, 36);
     // joint
     glBindVertexArray(sphereVAO);
     glm::mat4 rightShoulderTransform = baseTransform;
@@ -1063,28 +1186,6 @@ void drawRobot(const glm::mat4& projection, const glm::mat4& view) {
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);  // 銀色腳掌
     drawCone();
-
-    // decloration
-    // 炮塔基座（扁平的圓柱體）
-    glBindVertexArray(cylinderVAO);
-    model = baseTransform;
-    model = glm::translate(model, glm::vec3(0.0f, 0.65f, -0.4f));  // 位於背部中央偏上
-    model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // 使圓柱體平躺
-    model = glm::scale(model, glm::vec3(0.25f, 0.3f, 0.25f));      // 扁平的圓盤形狀
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.85f, 0.76f, 0.49f);  // 深灰色
-    drawCylinder();
-
-    // 主炮（圓柱體）
-    model = baseTransform;
-    model = glm::translate(model, glm::vec3(0.0f, 1.2f, -0.35f));  // 起始位置
-    model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));  // 轉向
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.2f));    // 向前延伸
-    // 確保 X 和 Z 軸縮放相同，保持圓形橫截面
-    model = glm::scale(model, glm::vec3(0.08f, 0.08f, 0.4f));    // 調整長度，保持圓形截面
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorLoc, 0.7f, 0.7f, 0.7f);
-    drawCylinder();
     }
 
 int main() {
@@ -1116,7 +1217,21 @@ int main() {
     createCube();
     initCylinder(1.0f, 1.0f, 32);
     initCone(0.7f, 1.5f, 1.0f, 32);
+    glm::vec3 root_front(0.0f, 0.0f, 0.0f);         // 根部前緣
+    glm::vec3 tip_front(0.8f, 0.0f, 0.3f);         // 翼尖前緣，減少後移距離
+    glm::vec3 tip_back(0.8f, 0.0f, 0.0f);          // 翼尖後緣，與前緣保持相同的 x 座標
+    glm::vec3 root_back(0.0f, 0.0f, -0.5f);         // 根部後緣
+    // 初始化並創建機翼
+    initQuad(root_front, tip_front, tip_back, root_back, 0.05f);
+    createQuad();
 
+    // glm::vec3 panel_root_front(0.0f, 0.0f, 0.0f);
+    // glm::vec3 panel_tip_front(0.3f, 0.0f, -0.05f);
+    // glm::vec3 panel_tip_back(0.3f, 0.0f, -0.2f);
+    // glm::vec3 panel_root_back(0.0f, 0.0f, -0.15f);
+    // initQuad(panel_root_front, panel_tip_front, panel_tip_back, panel_root_back, 0.03f);
+    // createQuad();
+    
     glEnable(GL_DEPTH_TEST);
 
     // 渲染循環
@@ -1152,6 +1267,8 @@ int main() {
     glDeleteVertexArrays(1, &sphereVAO);
     glDeleteBuffers(1, &sphereVBO);
     glDeleteBuffers(1, &sphereEBO);
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteBuffers(1, &quadVBO);
     glDeleteProgram(shaderProgram);
 
     glfwTerminate();
