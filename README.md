@@ -1,0 +1,2 @@
+# Multi-layered animation system integrating for natural joint movement and transformation.
+Developed a 3D transformation system for complex mechanical models, implementing real-time geometric transformation algorithms and matrix-based animations for precise mechanical movements. Enhanced visual fidelity through custom shader programming for metallic materials and optimized rendering techniques, achieving seamless model transitions and realistic mechanical part interactions in a real-time environment.
